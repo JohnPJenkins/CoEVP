@@ -1,14 +1,14 @@
-FLANN_PV=1.8.1
-FLANN_DIR=flann-${FLANN_PV}-src
+FLANN_PV=1.8.4
+FLANN_DIR=flann-${FLANN_PV}
 FLANN_HEADER=$(FLANN_DIR)/src/cpp/flann/flann.hpp
 
 all: ${FLANN_HEADER}
 
 $(FLANN_DIR).tar.gz:
 ifeq (, $(shell which curl))
-	wget -O $@ https://github.com/mariusmuja/flann/archive/${FLANN_PV}-src.tar.gz $(WGETFLAG)
+	wget -O $@ https://github.com/mariusmuja/flann/archive/${FLANN_PV}.tar.gz $(WGETFLAG)
 else
-	curl -o $@ -L https://github.com/mariusmuja/flann/archive/${FLANN_PV}-src.tar.gz $(CURLFLAG)
+	curl -o $@ -L https://github.com/mariusmuja/flann/archive/${FLANN_PV}.tar.gz $(CURLFLAG)
 endif
 
 $(FLANN_HEADER): ${FLANN_DIR}.tar.gz
