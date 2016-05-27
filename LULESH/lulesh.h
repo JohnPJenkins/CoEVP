@@ -24,7 +24,7 @@ public:
   Domain domain;
 
 Lulesh(){ finescale_dt_modifier = Real_t(1.); }
-~Lulesh(){}
+~Lulesh();
 
 void CommRecv(Domain *domain, int msgType, Index_t xferFields, Index_t size,
          bool recvMin);

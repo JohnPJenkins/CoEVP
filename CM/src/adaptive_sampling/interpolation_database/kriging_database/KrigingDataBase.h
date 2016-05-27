@@ -277,6 +277,12 @@ namespace krigcpl {
       int _numberKrigingModels;
       int _numberPointValuePairs;
 
+      // want these to be process-global
+      bool printer;
+      static int ninstance;
+      static uint64_t _ninterp_grad;
+      static uint64_t _ninterp_nograd;
+
       //
       // kriging model aging threshold in seconds. kriging models that
       // have not been access in the last threshold seconds will be

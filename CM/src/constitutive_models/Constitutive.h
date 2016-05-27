@@ -24,7 +24,7 @@ class Constitutive
    Constitutive( ConstitutiveGlobal& global)
       : m_global(&global), m_sampler(NULL), m_finescale_verbose(false) {;}
 
-   ~Constitutive();
+   virtual ~Constitutive();
 
    //   virtual void advance( const double delta_t ) = 0;
    virtual ConstitutiveData advance( const double delta_t, const Tensor2Gen& L_new, const double, void* state ) = 0;

@@ -4435,3 +4435,7 @@ void Lulesh::go(int myRank, int numRanks, int sampling, int visit_data_interval,
 #endif
 }
 
+Lulesh::~Lulesh()
+{
+  for (Index_t i = 0; i < domain.numElem(); i++) delete domain.cm(i);
+}

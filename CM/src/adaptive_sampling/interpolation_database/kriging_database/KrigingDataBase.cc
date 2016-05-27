@@ -86,6 +86,7 @@ Additional BSD Notice
 #include <toolbox/database/HDFDatabase.h>
 #include <murmur3/MurmurHash3.h>
 
+#define PRINT_STATS 0
 
 #define STRING_DIGITS 16
 #define MURMUR_SEED 42
@@ -101,6 +102,10 @@ Additional BSD Notice
 using namespace krigalg;
 
 namespace krigcpl {
+
+int KrigingDataBase::ninstance = 0;
+uint64_t KrigingDataBase::_ninterp_grad = 0;
+uint64_t KrigingDataBase::_ninterp_nograd = 0;
 
 uint128_t saved_model_key;
 
@@ -142,6 +147,10 @@ uint128_t saved_model_key;
              data[data_length-1] = strtod(buffer,NULL);
           }
        }
+
+       // shared counters (hacky)
+       uint64_t _nerr_calls = 0;
+       uint64_t _nerr_toosmall = 0;
 
       //
       // local functions
@@ -234,6 +243,7 @@ uint128_t saved_model_key;
 		       double                     meanErrorFactor)
       {
 
+        _nerr_calls++;
 	const int numberPoints = krigingModel.getNumberPoints();
 
 	//
@@ -257,6 +267,7 @@ uint128_t saved_model_key;
 
 	if (numberPoints <= minNumberPoints ) {
 
+    _nerr_toosmall++;
 	  //
 	  // get the kriging estimate at query point
 	  //
@@ -1528,6 +1539,7 @@ uint128_t saved_model_key;
         _ann(ann),
 	_numberKrigingModels(0),
 	_numberPointValuePairs(0),
+  printer((ninstance++) == 0),
 	_agingThreshold(agingThreshold),
 	_modelDB(modelDB)
     {
@@ -1584,9 +1596,19 @@ uint128_t saved_model_key;
 
     KrigingDataBase::~KrigingDataBase()
     {
-
-      return;
-
+      if (PRINT_STATS && printer) {
+        printf("Interpolation Stats:\n"
+            "  num interp calcs total:                %lu\n"
+            "  num interp calcs with gradient:        %lu\n"
+            "  num interp calcs w/o  gradient:        %lu\n"
+            "  num error calcs:                       %lu\n"
+            "  num error calcs with too small models: %lu\n",
+            _ninterp_grad+_ninterp_nograd,
+            _ninterp_grad,
+            _ninterp_nograd,
+            _nerr_calls,
+            _nerr_toosmall);
+      }
     }
     
     //
@@ -1602,6 +1624,8 @@ uint128_t saved_model_key;
                                  std::vector<bool> & flags,
                                  double            & error_estimate)
     {
+
+      _ninterp_nograd++;
 
       //
       // make sure there is enough space in flags 
@@ -1847,6 +1871,8 @@ uint128_t saved_model_key;
                                  std::vector<bool> & flags,
                                  double            & error_estimate)
     {
+
+      _ninterp_grad++;
 
       //
       // make sure there is enough space in flags 
