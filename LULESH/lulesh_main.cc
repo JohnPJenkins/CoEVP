@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
   int  hioing = 0;                //  HIO global store
   int  global_ns = 0;             //  By default, do not use a global nearest neighbor
   int  flanning = 0;              //  By default, do not use FLANN for nearest neighbor search
+  int  nnonly = 0;                 //  Use the NN-only sampler
   int  logging = 0;               //  By default, do not use FLANN for nearest neighbor search
   int  flann_n_trees = 1;         // Default can be overridden using command line
   int  flann_n_checks = 20;       // Default can be overridden using command line
@@ -64,6 +65,7 @@ int main(int argc, char *argv[])
   addArg("hio",      'b', 0, 'i',  &(hioing),              0, "use HIO library");
   addArg("globalns" ,'g', 0, 'i',  &(global_ns),           0, "use global neighbor search/data store");
   addArg("flann",    'f', 0, 'i',  &(flanning),            0, "use FLANN library");
+  addArg("nnonly",    'A', 0, 'i',  &(nnonly),               0, "use the NN-only sampler");
   addArg("n_trees",  't', 1, 'i',  &(flann_n_trees),       0, "number of FLANN trees");
   addArg("n_checks", 'c', 1, 'i',  &(flann_n_checks),      0, "number of FLANN checks");
   addArg("parts",    'p', 1, 'i',  &(file_parts),          0, "number of file parts");
@@ -84,7 +86,6 @@ int main(int argc, char *argv[])
     freeArgs();
     exit(1);
   } 
-
 
   // Initialize Taylor cylinder mesh
   luleshSystem.Initialize(myRank, numRanks, edgeElems, heightElems, domStopTime, simStopCycle, timer);
