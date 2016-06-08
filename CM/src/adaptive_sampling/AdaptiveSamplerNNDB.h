@@ -1,8 +1,8 @@
-#ifndef ADAPTIVESAMPLER_INCLUDED
-#define ADAPTIVESAMPLER_INCLUDED
+#ifndef ADAPTIVESAMPLERNNDB_INCLUDED
+#define ADAPTIVESAMPLERNNDB_INCLUDED
 
 #include <KrigingDataBaseNNDB.h>
-#include <ApproxNearestNeighbors.h>
+#include <ApproxNearestNeighborsDB.h>
 #include <ModelDatabase.h>
 
 #include "FineScale.h"
