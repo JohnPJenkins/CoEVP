@@ -83,7 +83,7 @@ Constitutive::~Constitutive()
 bool
 Constitutive::adaptiveSamplingEnabled() const
 {
-   return m_sampler != NULL;
+   return m_sampler != NULL || m_nnsampler != NULL;
 }
 
 
