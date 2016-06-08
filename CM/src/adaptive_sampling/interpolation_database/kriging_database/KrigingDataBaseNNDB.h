@@ -128,6 +128,8 @@ class KrigingDataBaseNNDB
    */
   std::vector<std::string> getStatisticsNames() const;
 
+  void printDBStats(std::ostream & outputStream) const;
+
   private:
 
   krigalg::InterpolationModelFactoryPointer _modelFactory;

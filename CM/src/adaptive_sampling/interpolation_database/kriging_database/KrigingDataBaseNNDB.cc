@@ -238,7 +238,7 @@ KrigingDataBaseNNDB::insert(
 //
 
 int
-KrigingDataBaseNNDB::getNumberStatistics() const { return 1; }
+KrigingDataBaseNNDB::getNumberStatistics() const { return 4; }
 
 //
 // Write performance stats
@@ -272,6 +272,21 @@ KrigingDataBaseNNDB::getStatisticsNames() const
   names.emplace_back("Number of error calls with too small models (across all value dims) (note: 2 interpolations for each of these)");
 
   return names;
+}
+
+void
+KrigingDataBaseNNDB::printDBStats(std::ostream & outputStream) const
+{
+  const int numberStats = getNumberStatistics();
+  std::vector<double> stats(numberStats);
+
+  getStatistics(&(stats[0]), numberStats);
+
+  const std::vector<std::string> statStrings = getStatisticsNames();
+  assert(static_cast<int>(statStrings.size()) == numberStats);
+
+  for (int i = 0; i < numberStats; ++i)
+    outputStream << statStrings[i] <<  " " << stats[i] << std::endl;
 }
 
 InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
