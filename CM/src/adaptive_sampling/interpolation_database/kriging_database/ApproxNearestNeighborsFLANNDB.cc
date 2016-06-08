@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2016 UChicago Argonne, LLC
+ *
+ * See COPYRIGHT-ANL in top-level directory.
+ */
+
 #include <algorithm>
 #include "ApproxNearestNeighborsFLANNDB.h"
 
