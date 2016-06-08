@@ -355,9 +355,6 @@ bool KrigingDataBaseNNDB::checkErrorAndInterpolate(
     double *gradient,
     double &errorEstimate)
 {
-  const bool hasGradient = model.hasGradient();
-  assert(!(hasGradient && gradient == nullptr));
-
   const double toleranceSqr = _tolerance*_tolerance;
 
   // NOTE: doing max calc on the squared error estimate - take square root at
@@ -383,8 +380,11 @@ bool KrigingDataBaseNNDB::checkErrorAndInterpolate(
     _num_interpolations++;
     const Value valueEstimate = model.interpolate(i, queryPoint);
     value[i] = valueEstimate[0];
-    if (hasGradient) {
-      std::copy(valueEstimate.begin()+1, valueEstimate.end(), gradient);
+    if (gradient) {
+      assert(model.hasGradient());
+      for (int j = 0; j < _pointDimension; j++) {
+        gradient[j*_valueDimension + i] = valueEstimate[1+j];
+      }
     }
   }
 
