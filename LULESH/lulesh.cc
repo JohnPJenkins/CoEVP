@@ -116,6 +116,7 @@ int showMeMonoQ = 0 ;
 
 // Approximate nearest neighbor search options
 #include "ApproxNearestNeighborsFLANN.h"
+#include "ApproxNearestNeighborsFLANNDB.h"
 #include "ApproxNearestNeighborsMTree.h"
 
 // Database options
@@ -4062,7 +4063,7 @@ void Lulesh::Initialize(int myRank, int numRanks, int edgeDim, int heightDim, do
 }
 
 
-void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_modelDB, ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB **global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling, hg_service_mode mode, ssg_t ssg, margo_instance_id mid)
+void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_modelDB, ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB *global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling, hg_service_mode mode, ssg_t ssg, margo_instance_id mid)
 {
    Index_t domElems = domain.numElem();
 
@@ -4183,33 +4184,29 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
          L(3,3) = D[2];         // dzddz
 
          int point_dimension = plasticity_model->pointDimension();
-         ApproxNearestNeighbors* ann;
-         ModelDatabase *modelDB;
+         ApproxNearestNeighbors* ann = nullptr;
+         ApproxNearestNeighborsDB *anndb = nullptr;
+         ModelDatabase *modelDB = nullptr;
          if (global_modelDB) {
             modelDB = global_modelDB;
-         } else {
+         } else if (!nnonly) {
             modelDB = new ModelDB_HashMap();
          }
 
          if (nnonly) {
-           if (*global_anndb) {
-             anndb = *global_anndb;
+           if (global_anndb) {
+             anndb = global_anndb;
            }
            else {
              // should be checked for in lulesh_main
              assert(flanning);
-             assert(mode == HGSVC_NONE || mode == HGSVC_NNONLY);
-             if (mode == HGSVC_NONE) {
+             assert(mode == HGSVC_NONE);
 #ifdef FLANN
-               anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks, false);
+             anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks);
 #else
-               throw std::runtime_error("FLANN not compiled in");
+             throw std::runtime_error("FLANN not compiled in");
 #endif
-             }
-             else {
-               anndb = new ApproxNearestNeighborsDBHGWrapClient(point_dimension, ssg, mid, false);
-             }
-             if (global_ns && !*global_anndb) *global_anndb = anndb;
+             if (global_ns && !global_anndb) global_anndb = anndb;
            }
          }
          else {
@@ -4226,18 +4223,19 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
             } else {
                std::string mtreeDirectoryName = ".";
                ann = (ApproxNearestNeighbors*)(new ApproxNearestNeighborsMTree(point_dimension,
-                        "kriging_model_database",
-                        mtreeDirectoryName,
-                        &(std::cout),
-                        false));
-            }
-         }
-         if ( global_ns && !global_ann){// only true for 1st element
-            global_ann=ann; 
+                     "kriging_model_database",
+                     mtreeDirectoryName,
+                     &(std::cout),
+                     false));
+             }
+             if (global_ns && !global_ann){// only true for 1st element
+               global_ann=ann; 
+             }
+           }
          }
 
          size_t state_size;
-         domain.cm(i) = (Constitutive*)(new ElastoViscoPlasticity(cm_global, ann, modelDB, nullptr, L, bulk_modulus, shear_modulus, eos_model,
+         domain.cm(i) = (Constitutive*)(new ElastoViscoPlasticity(cm_global, ann, modelDB, anndb, L, bulk_modulus, shear_modulus, eos_model,
                   plasticity_model, sampling, state_size));
          domain.cm_state(i) = operator new(state_size);
          domain.cm(i)->getState(domain.cm_state(i));

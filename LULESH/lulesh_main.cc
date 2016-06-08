@@ -10,6 +10,9 @@
 #include "SingletonDB.h"
 #include "ModelDB_SingletonDB.h"
 
+#include <ApproxNearestNeighbors.h>
+#include <ApproxNearestNeighborsDB.h>
+
 #if defined(LOGGER)      // CoEVP Makefile enforces assert: LOGGER=REDIS=yes
 #include "LoggerDB.h"    // Includes Logger base class too
 #include "Locator.h"
@@ -90,6 +93,8 @@ int main(int argc, char *argv[])
   // Initialize Taylor cylinder mesh
   luleshSystem.Initialize(myRank, numRanks, edgeElems, heightElems, domStopTime, simStopCycle, timer);
 
+  DIE_IF(nnonly && (!sampling || !flanning || posixing || redising || hioing),
+      "NN-only DB requires sampling, using flann (for now) and doesn't use a DB mode");
 
 
   if (sampling) {
@@ -166,7 +171,8 @@ int main(int argc, char *argv[])
    /*************************************/
    ModelDatabase * global_modelDB = nullptr;
    ApproxNearestNeighbors* global_ann = nullptr;
-   if(sampling)
+   ApproxNearestNeighborsDB *global_anndb = nullptr;
+   if(sampling && !nnonly)
    {
       if(redising){
         if(distributed_redis)
@@ -216,7 +222,7 @@ int main(int argc, char *argv[])
 #endif
 
   // Construct fine scale models
-  luleshSystem->ConstructFineScaleModel(sampling,global_modelDB,global_ann,&global_anndb,flanning,flann_n_trees,flann_n_checks,global_ns,nnonly,use_vpsc, c_scaling, hgsvc_mode, svc.ssg, svc.mid);
+  luleshSystem.ConstructFineScaleModel(sampling,global_modelDB,global_ann,global_anndb,flanning,flann_n_trees,flann_n_checks,global_ns,nnonly,use_vpsc, c_scaling, hgsvc_mode, svc.ssg, svc.mid);
   
   // Exchange nodal mass
   luleshSystem.ExchangeNodalMass();
