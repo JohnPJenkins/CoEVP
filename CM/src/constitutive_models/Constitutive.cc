@@ -181,20 +181,48 @@ Constitutive::evaluateSpecificModel( const int                  model,
                                      m_error_estimate );
 }
 
+// shim for AdaptiveSampler calls
+int
+Constitutive::getNumberStatistics() const
+{
+  if (adaptiveSamplingEnabled()) {
+    return (m_nnsampler == nullptr)
+      ? m_sampler->getNumberStatistics() : m_nnsampler->getNumberStatistics();
+  }
+  else
+    return 0;
+}
+void Constitutive::getStatistics(double *stats, int size) const
+{
+  if (adaptiveSamplingEnabled()) {
+    if (m_nnsampler == nullptr)
+      m_sampler->getStatistics(stats, size);
+    else
+      m_nnsampler->getStatistics(stats, size);
+  }
+}
+std::vector<std::string> Constitutive::getStatisticsNames() const
+{
+  if (adaptiveSamplingEnabled()) {
+    return (m_nnsampler == nullptr)
+      ? m_sampler->getStatisticsNames() : m_nnsampler->getStatisticsNames();
+  }
+  else
+    return std::vector<std::string>();
+}
 
 void
 Constitutive::getModelInfo( int& numModels, int& numPairs ) const
 {
-  if (m_nnsampler != nullptr)
-    throw std::logic_error("can't \"getModelInfo\" with the NN sampler");
    if ( adaptiveSamplingEnabled() ) {
-      m_sampler->getModelInfo(numModels, numPairs);
+     if (m_nnsampler != nullptr)
+       throw std::logic_error("can't \"getModelInfo\" with the NN sampler, use getStatistics set of calls instead");
+     m_sampler->getModelInfo(numModels, numPairs);
    }
    else {
       numModels = numPairs = 0;
    }
 }
-
 
 void
 Constitutive::printStats()

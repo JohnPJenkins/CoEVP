@@ -103,7 +103,6 @@ IdealGas::advance( const double      delta_t,
 {
    ConstitutiveData return_data;
    return_data.sigma_prime = stressDeviator();
-   getModelInfo(return_data.num_models, return_data.num_point_value_pairs);
    return_data.num_Newton_iters = 0;
 
    return return_data;

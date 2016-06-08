@@ -38,6 +38,11 @@ class AdaptiveSamplerNNDB
 
   void printNewInterpolationStatistics(std::ostream& outputStream);
 
+  // shim for KrigingDataBaseNNDB calls + my stats
+  int getNumberStatistics() const;
+  void getStatistics(double *stats, int size) const;
+  std::vector<std::string> getStatisticsNames() const;
+
   int getNumSamples() const {return m_num_samples;}
 
   int getNumSuccessfulInterpolations() const {return m_num_successful_interpolations;}

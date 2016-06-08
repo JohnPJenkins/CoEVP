@@ -475,6 +475,42 @@ AdaptiveSampler::getModelInfo( int& numModels,
    numPairs = stats[1];
 }
 
+int
+AdaptiveSampler::getNumberStatistics() const
+{
+  return m_interp->getNumberStatistics() + 3;
+}
+
+void
+AdaptiveSampler::getStatistics(double *stats, int size) const
+{
+  m_interp->getStatistics(stats, size);
+
+  const int s_interp = m_interp->getNumberStatistics();
+  size -= s_interp;
+  if (size <= 0) return;
+  if (size > 3) size = 3;
+  stats += s_interp;
+  switch (size) {
+    case 3:
+      stats[2] =
+        (double)m_num_successful_interpolations / (double)m_num_samples;
+    case 2:
+      stats[1] = m_num_fine_scale_evaluations;
+    case 1:
+      stats[0] = m_num_samples;
+  }
+}
+
+std::vector<std::string>
+AdaptiveSampler::getStatisticsNames() const
+{
+  std::vector<std::string> names = m_interp->getStatisticsNames();
+  names.emplace_back("Number of samples");
+  names.emplace_back("Number of fine scale evaluations");
+  names.emplace_back("Interpolation efficiency");
+  return names;
+}
 
 void
 AdaptiveSampler::printStatistics( std::ostream & outputStream )

@@ -51,6 +51,11 @@ class AdaptiveSampler
    void getModelInfo( int& numModels,
                       int& numPairs ) const;
 
+   // shim for KrigingDataBase calls + my stats
+   int getNumberStatistics() const;
+   void getStatistics(double *stats, int size) const;
+   std::vector<std::string> getStatisticsNames() const;
+
    void printStatistics( std::ostream& outputStream );
 
    void printNewInterpolationStatistics( std::ostream& outputStream );

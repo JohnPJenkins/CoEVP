@@ -239,7 +239,6 @@ ElastoViscoPlasticity::advance( const double delta_t, const Tensor2Gen& L_new, c
 
    ConstitutiveData return_data;
    return_data.sigma_prime = stressDeviator();
-   getModelInfo(return_data.num_models, return_data.num_point_value_pairs);
    return_data.num_Newton_iters = numNewtonIterations();
 
    getKinematicVariableState(state);

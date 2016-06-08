@@ -14,8 +14,6 @@
 struct ConstitutiveData
 {
    Tensor2Sym  sigma_prime;
-   int         num_models;
-   int         num_point_value_pairs;
    int         num_Newton_iters;
 };
 
@@ -85,6 +83,11 @@ class Constitutive
                                std::vector<double>&       value ) const;
 
    bool adaptiveSamplingEnabled() const;
+
+   // shim for AdaptiveSampler calls
+   int getNumberStatistics() const;
+   void getStatistics(double *stats, int size) const;
+   std::vector<std::string> getStatisticsNames() const;
 
    void getModelInfo( int& numModels,
                       int& numPairs ) const;

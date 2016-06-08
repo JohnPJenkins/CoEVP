@@ -61,6 +61,7 @@
 
 */
 
+#include <memory>
 #include <vector>
 #include <math.h>
 #include <stdio.h>
@@ -3072,12 +3073,6 @@ int Lulesh::UpdateStressForElems()
          int num_iters = cm_data.num_Newton_iters;
          if (num_iters > max_local_newton_iters) max_local_newton_iters = num_iters;
 
-#if 0
-         if (num_iters > MAX_NONLINEAR_ITER) {
-            cout << "numModels = " << cm_data.num_models << ", numPairs = " << cm_data.num_point_value_pairs << endl;
-         }
-#endif
-
          const Tensor2Sym& sigma_prime = cm_data.sigma_prime;
 
          Real_t sx  = domain.sx(k) = sigma_prime(1,1);
@@ -4354,12 +4349,16 @@ void Lulesh::go(int myRank, int numRanks, int sampling, int visit_data_interval,
 #endif   
    if ( sampling ) {
 
-      Int_t minNumModels = 10000000;
-      Int_t maxNumModels = 0;
-      Int_t averageNumModels = 0;
-      Int_t minNumPairs = 10000000;
-      Int_t maxNumPairs = 0;
-      Int_t averageNumPairs = 0;
+      const int num_stats = domain.cm(0)->getNumberStatistics();
+      std::vector<std::string> stat_strs = domain.cm(0)->getStatisticsNames();
+      auto stats     = std::make_unique<double[]>(num_stats);
+      auto agg_stats = std::make_unique<double[]>(num_stats);
+      auto max_stats = std::make_unique<double[]>(num_stats);
+      auto min_stats = std::make_unique<double[]>(num_stats);
+      std::fill_n(agg_stats.get(), num_stats, 0.);
+      std::fill_n(max_stats.get(), num_stats, std::numeric_limits<double>::lowest());
+      std::fill_n(min_stats.get(), num_stats, std::numeric_limits<double>::max());
+
       Real_t point_average = Real_t(0.);
       Real_t value_average = Real_t(0.);
       Real_t point_max = Real_t(0.);
@@ -4367,25 +4366,17 @@ void Lulesh::go(int myRank, int numRanks, int sampling, int visit_data_interval,
       Index_t domElems = domain.numElem() ;
       for (Index_t i=0; i<domElems; ++i) {
 
-         Int_t numModels, numPairs;
-         domain.cm(i)->getModelInfo(numModels, numPairs);
-
-         //         cout << i << ", numModels = " << numModels << ", numPairs = " << numPairs << endl;
-
-         averageNumModels += numModels;
-         averageNumPairs += numPairs;
-
-         if (numModels < minNumModels) minNumModels = numModels;
-         if (numModels > maxNumModels) maxNumModels = numModels;
-         if (numPairs < minNumPairs) minNumPairs = numPairs;
-         if (numPairs > maxNumPairs) maxNumPairs = numPairs;
+         domain.cm(i)->getStatistics(stats.get(), num_stats);
+         for (int j = 0; j < num_stats; j++) {
+           agg_stats[j] += stats[j];
+           max_stats[j] = std::max(stats[j], max_stats[j]);
+           min_stats[j] = std::min(stats[j], min_stats[j]);
+         }
 
          Real_t point_norm = domain.cm(i)->getAveragePointNorm();
          Real_t value_norm = domain.cm(i)->getAverageValueNorm();
          Real_t point_norm_max = domain.cm(i)->getPointNormMax();
          Real_t value_norm_max = domain.cm(i)->getValueNormMax();
-
-         //         cout << i << ", point_norm = " << point_norm << ", value_norm = " << value_norm << endl;
 
          point_average += point_norm;
          value_average += value_norm;
@@ -4402,8 +4393,13 @@ void Lulesh::go(int myRank, int numRanks, int sampling, int visit_data_interval,
       point_average /= domElems;
       value_average /= domElems;
 
-      cout << "Number of Kriging models: " << averageNumModels << " (average), " << minNumModels << " (min), " << maxNumModels << " (max)" << endl;
-      cout << "Number of (query,value) pairs: " << averageNumPairs << " (average), " << minNumPairs << " (min), " << maxNumPairs << " (max)" << endl;
+      for (int i = 0; i < num_stats; i++) {
+        cout << stat_strs[i]            << ": "
+             << agg_stats[i]            << " (total), "
+             << agg_stats[i] / domElems << " (average), "
+             << min_stats[i]            << " (min), "
+             << max_stats[i]            << " (max)" << endl;
+      }
 
       cout << "Scaled query average = " << point_average << ", max = " << point_max << endl;
       cout << "Scaled value average = " << value_average << ", max = " << value_max << endl; 
