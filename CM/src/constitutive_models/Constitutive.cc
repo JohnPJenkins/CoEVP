@@ -63,12 +63,19 @@ Additional BSD Notice
 
 #include "Constitutive.h"
 #include "AdaptiveSampler.h"
+#include <stdexcept>
 
 Constitutive::~Constitutive()
 {
    if ( adaptiveSamplingEnabled() ) {
-      delete m_sampler;
-      m_sampler = NULL;
+     if (m_nnsampler == nullptr) {
+       delete m_sampler;
+       m_sampler = NULL;
+     }
+     else {
+       delete m_nnsampler;
+       m_nnsampler = nullptr;
+     }
    }
 }
 
@@ -94,6 +101,7 @@ Constitutive::enableAdaptiveSampling( const int                     pointDimensi
                                       ApproxNearestNeighbors*       ann,
                                       ModelDatabase*                modelDB)
 {
+   assert(m_nnsampler == nullptr);
    m_sampler = new AdaptiveSampler( pointDimension,
                                     valueDimension,
                                     pointScaling,
@@ -114,6 +122,25 @@ Constitutive::enableAdaptiveSampling( const int                     pointDimensi
    m_error_estimate = 0.;
 }
 
+void
+Constitutive::enableAdaptiveSamplingNNDB(
+    int pointDimension,
+    int valueDimension,
+    const std::vector<double>& pointScaling,
+    const std::vector<double>& valueScaling,
+    int maxKrigingModelSize,
+    double theta,
+    double meanErrorFactor,
+    double tolerance,
+    double maxQueryPointModelDistance,
+    ApproxNearestNeighborsDB* ann)
+{
+  assert(m_sampler == nullptr);
+  m_nnsampler = new AdaptiveSamplerNNDB(pointDimension, valueDimension,
+      pointScaling, valueScaling, maxKrigingModelSize, theta, meanErrorFactor,
+      tolerance, maxQueryPointModelDistance, ann);
+  m_error_estimate = 0.;
+}
 
 void
 Constitutive::sample( const FineScale&           fine_scale_model,
@@ -122,14 +149,20 @@ Constitutive::sample( const FineScale&           fine_scale_model,
 {
    std::vector<bool> interpolateFlags(InterpolationDataBase::NUMBER_FLAGS);
 
-   m_sampler->setVerbose(true);
+   if (m_nnsampler == nullptr) {
+     m_sampler->setVerbose(true);
 
-   m_sampler->sample( value,
-                      point,
-                      m_hint,
-                      interpolateFlags,
-                      fine_scale_model,
-                      m_error_estimate );
+     m_sampler->sample( value,
+                        point,
+                        m_hint,
+                        interpolateFlags,
+                        fine_scale_model,
+                        m_error_estimate );
+   }
+   else {
+     m_nnsampler->setVerbose(true);
+     m_nnsampler->sample(value, point, fine_scale_model, m_error_estimate);
+   }
 }
 
 
@@ -139,6 +172,8 @@ Constitutive::evaluateSpecificModel( const int                  model,
                                      const std::vector<double>& point,
                                      std::vector<double>&       value ) const
 {
+  if (m_nnsampler != nullptr)
+    throw std::logic_error("can't \"evaluateSpecificModel\" with the NN sampler");
    m_sampler->evaluateSpecificModel( value,
                                      point,
                                      model,
@@ -150,6 +185,8 @@ Constitutive::evaluateSpecificModel( const int                  model,
 void
 Constitutive::getModelInfo( int& numModels, int& numPairs ) const
 {
+  if (m_nnsampler != nullptr)
+    throw std::logic_error("can't \"getModelInfo\" with the NN sampler");
    if ( adaptiveSamplingEnabled() ) {
       m_sampler->getModelInfo(numModels, numPairs);
    }
@@ -163,7 +200,10 @@ void
 Constitutive::printStats()
 {
    if ( adaptiveSamplingEnabled() ) {
-      m_sampler->printStatistics(std::cout);
+      if (m_nnsampler == nullptr)
+        m_sampler->printStatistics(std::cout);
+      else
+        m_nnsampler->printStatistics(std::cout);
    }
 }
 
@@ -172,7 +212,10 @@ void
 Constitutive::printNewInterpStats()
 {
    if ( adaptiveSamplingEnabled() ) {
-      m_sampler->printNewInterpolationStatistics(std::cout);
+     if (m_nnsampler == nullptr)
+       m_sampler->printNewInterpolationStatistics(std::cout);
+     else
+       m_nnsampler->printNewInterpolationStatistics(std::cout);
    }
 }
 
@@ -183,7 +226,8 @@ Constitutive::getNumSamples() const
    int samples = 0;
 
    if ( adaptiveSamplingEnabled() ) {
-      samples = m_sampler->getNumSamples();
+      samples = (m_nnsampler==nullptr)
+        ? m_sampler->getNumSamples() : m_nnsampler->getNumSamples();
    }
    else {
       cout << "Constitutive::getNumSamples(): Adaptive sampling is not enabled!" << endl;
@@ -199,7 +243,9 @@ Constitutive::getNumSuccessfulInterpolations() const
    int interps = 0;
 
    if ( adaptiveSamplingEnabled() ) {
-      interps = m_sampler->getNumSuccessfulInterpolations();
+      interps = (m_nnsampler == nullptr)
+        ? m_sampler->getNumSuccessfulInterpolations()
+        : m_nnsampler->getNumSuccessfulInterpolations();
    }
    else {
       cout << "Constitutive::getNumSuccessfulInterpolations(): Adaptive sampling is not enabled!" << endl;
@@ -215,7 +261,8 @@ Constitutive::getAveragePointNorm() const
    double average = 0.;
 
    if ( adaptiveSamplingEnabled() ) {
-      average = m_sampler->getAveragePointNorm();
+      average = (m_nnsampler == nullptr) ?
+        m_sampler->getAveragePointNorm() : m_nnsampler->getAveragePointNorm();
    }
 
    return average;
@@ -228,7 +275,8 @@ Constitutive::getAverageValueNorm() const
    double average = 0.;
 
    if ( adaptiveSamplingEnabled() ) {
-      average = m_sampler->getAverageValueNorm();
+      average = (m_nnsampler == nullptr) ?
+        m_sampler->getAverageValueNorm() : m_nnsampler->getAverageValueNorm();
    }
 
    return average;
@@ -241,7 +289,8 @@ Constitutive::getPointNormMax() const
    double max = 0.;
 
    if ( adaptiveSamplingEnabled() ) {
-      max = m_sampler->getPointNormMax();
+      max = (m_nnsampler == nullptr)
+        ? m_sampler->getPointNormMax() : m_nnsampler->getPointNormMax();
    }
 
    return max;
@@ -254,7 +303,8 @@ Constitutive::getValueNormMax() const
    double max = 0.;
 
    if ( adaptiveSamplingEnabled() ) {
-      max = m_sampler->getValueNormMax();
+      max = (m_nnsampler == nullptr)
+        ? m_sampler->getValueNormMax() : m_nnsampler->getValueNormMax();
    }
 
    return max;

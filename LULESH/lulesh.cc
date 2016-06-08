@@ -4219,7 +4219,7 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
          }
 
          size_t state_size;
-         domain.cm(i) = (Constitutive*)(new ElastoViscoPlasticity(cm_global, ann, modelDB, L, bulk_modulus, shear_modulus, eos_model,
+         domain.cm(i) = (Constitutive*)(new ElastoViscoPlasticity(cm_global, ann, modelDB, nullptr, L, bulk_modulus, shear_modulus, eos_model,
                   plasticity_model, sampling, state_size));
          domain.cm_state(i) = operator new(state_size);
          domain.cm(i)->getState(domain.cm_state(i));

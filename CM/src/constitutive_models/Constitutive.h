@@ -4,7 +4,9 @@
 #include <cstring>
 #include "ConstitutiveGlobal.h"
 #include "ApproxNearestNeighbors.h"
+#include "ApproxNearestNeighborsDB.h"
 #include "AdaptiveSampler.h"
+#include "AdaptiveSamplerNNDB.h"
 #include "FineScale.h"
 #include "tensor.h"
 #include "ModelDatabase.h"
@@ -22,7 +24,7 @@ class Constitutive
  public:
 
    Constitutive( ConstitutiveGlobal& global)
-      : m_global(&global), m_sampler(NULL), m_finescale_verbose(false) {;}
+      : m_global(&global), m_sampler(NULL), m_nnsampler(NULL), m_finescale_verbose(false) {;}
 
    virtual ~Constitutive();
 
@@ -60,6 +62,18 @@ class Constitutive
                                 const double               maxQueryPointModelDistance,
                                 ApproxNearestNeighbors*    ann,
                                 ModelDatabase*             modelDB);
+
+   void enableAdaptiveSamplingNNDB(
+       int pointDimension,
+       int valueDimension,
+       const std::vector<double>& pointScaling,
+       const std::vector<double>& valueScaling,
+       int maxKrigingModelSize,
+       double theta,
+       double meanErrorFactor,
+       double tolerance,
+       double maxQueryPointModelDistance,
+       ApproxNearestNeighborsDB* ann);
 
    void sample( const FineScale&           fine_scale_model,
                 const std::vector<double>& point,
@@ -120,6 +134,7 @@ class Constitutive
    mutable bool m_finescale_verbose;
 
    AdaptiveSampler* m_sampler;
+   AdaptiveSamplerNNDB *m_nnsampler;
 
    ConstitutiveGlobal* m_global;
 

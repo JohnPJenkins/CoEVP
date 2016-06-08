@@ -71,6 +71,7 @@ Additional BSD Notice
 ElastoViscoPlasticity::ElastoViscoPlasticity( ConstitutiveGlobal&           global,
                                               ApproxNearestNeighbors*       ann, 
                                               ModelDatabase*                modelDB,
+                                              ApproxNearestNeighborsDB*     anndb,
                                               const Tensor2Gen&             L,
                                               const double                  bulk_modulus,
                                               const double                  shear_modulus,
@@ -112,9 +113,14 @@ ElastoViscoPlasticity::ElastoViscoPlasticity( ConstitutiveGlobal&           glob
       std::vector<double> valueScaling( valueDimension );
       plasticity_model->getScalingsForSampling( pointScaling, valueScaling );
 
-      enableAdaptiveSampling( pointDimension, valueDimension, pointScaling, valueScaling,
+      if (ann) {
+        enableAdaptiveSampling( pointDimension, valueDimension, pointScaling, valueScaling,
                               maxKrigingModelSize, maxNumberSearchModels, theta, meanErrorFactor,
                               tolerance, maxQueryPointModelDistance, ann, modelDB);
+      }
+      else {
+        enableAdaptiveSamplingNNDB(pointDimension, valueDimension, pointScaling, valueScaling, maxKrigingModelSize, theta, meanErrorFactor, tolerance, maxQueryPointModelDistance, anndb);
+      }
 
       m_tol = tolerance;
    }
