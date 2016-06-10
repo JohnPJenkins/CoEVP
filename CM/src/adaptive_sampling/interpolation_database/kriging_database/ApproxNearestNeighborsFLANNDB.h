@@ -19,15 +19,13 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
   bool is_empty;
   std::vector<double *> ann_points;
   std::vector<std::vector<double>> ann_values;
-  uint64_t ninsert;
 
   ApproxNearestNeighborsFLANNDB(int dim, int n_trees, int n_checks_default) :
     dim(dim),
     n_trees(n_trees),
     n_checks_default(n_checks_default),
     flann_index(flann::KDTreeIndexParams(n_trees)),
-    is_empty(true),
-    ninsert(0) { }
+    is_empty(true) { }
 
   void insert(
       std::vector<double> const &point,

@@ -15,8 +15,6 @@ void ApproxNearestNeighborsFLANNDB::insert(
 {
   assert(point.size() == static_cast<size_t>(dim));
 
-  ninsert++;
-
   double * pdata = new double[dim];
   std::copy(point.begin(), point.end(), pdata);
 
@@ -69,7 +67,7 @@ ApproxNearestNeighborsFLANNDB::knn_helper(
       double *dat = flann_index.getPoint(static_cast<size_t>(id));
       ids[i]  = id;
       points[i].resize(dim);
-      std::copy(points[i].begin(), points[i].end(), dat);
+      std::copy(dat, dat+dim, points[i].begin());
       values[i] = ann_values[id];
       dists[i] = mdists[0][i];
     }
