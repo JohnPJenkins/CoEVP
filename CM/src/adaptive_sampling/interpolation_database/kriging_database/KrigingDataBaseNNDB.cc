@@ -185,14 +185,13 @@ bool KrigingDataBaseNNDB::interpolate(
   const Point queryPoint(_pointDimension, point);
 
   // modelcache lookup - failure invalidates the cache
-  if (_modelcache != nullptr) {
-    if (checkErrorAndInterpolate(queryPoint, value, gradient, error_estimate)) {
-      _num_modelcache_hits++;
-      return true;
-    }
-    else
-      _num_modelcache_misses++;
+  if (_modelcache != nullptr &&
+      checkErrorAndInterpolate(queryPoint, value, gradient, error_estimate)) {
+    _num_modelcache_hits++;
+    return true;
   }
+  else
+    _num_modelcache_misses++;
 
   // Find closest set of points comprising a kriging model.
   _modelcache = findBuildCoKrigingModel(point);
@@ -202,6 +201,7 @@ bool KrigingDataBaseNNDB::interpolate(
 
   bool success = checkErrorAndInterpolate(
       queryPoint, value, gradient, error_estimate);
+  //eagerly evict the model cache if interpolation fails
   if (!success) _modelcache.reset();
   return success;
 }
@@ -263,7 +263,7 @@ void
 KrigingDataBaseNNDB::getStatistics(double *stats, int size) const
 {
   if (size <= 0) return;
-  if (size > 8) size = 8;
+  if (size > 10) size = 10;
   switch(size) {
     case 10: stats[9] = _num_modelcache_misses;
     case 9:  stats[8] = _num_modelcache_hits;
