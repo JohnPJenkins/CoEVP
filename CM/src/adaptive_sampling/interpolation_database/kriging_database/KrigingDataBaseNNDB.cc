@@ -157,7 +157,11 @@ KrigingDataBaseNNDB::KrigingDataBaseNNDB(
   _maxQueryPointModelDistance(maxQueryPointModelDistance),
   _numPointValuePairs(0),
   _num_err_calls(0),
-  _num_err_toosmalls(0) {  }
+  _num_err_toosmalls(0),
+  _num_knn_singleton_models(0),
+  _num_knn_nonsingleton_models(0),
+  _num_valid_knn_models(0),
+  _num_invalid_knn_models(0) { }
 
 KrigingDataBaseNNDB::~KrigingDataBaseNNDB() { }
 
@@ -238,7 +242,7 @@ KrigingDataBaseNNDB::insert(
 //
 
 int
-KrigingDataBaseNNDB::getNumberStatistics() const { return 4; }
+KrigingDataBaseNNDB::getNumberStatistics() const { return 8; }
 
 //
 // Write performance stats
@@ -248,8 +252,12 @@ void
 KrigingDataBaseNNDB::getStatistics(double *stats, int size) const
 {
   if (size <= 0) return;
-  if (size > 4) size = 4;
+  if (size > 8) size = 8;
   switch(size) {
+    case 8: stats[7] = _num_invalid_knn_models;
+    case 7: stats[6] = _num_valid_knn_models;
+    case 6: stats[5] = _num_knn_nonsingleton_models;
+    case 5: stats[4] = _num_knn_singleton_models;
     case 4: stats[3] = _num_err_toosmalls;
     case 3: stats[2] = _num_err_calls;
     case 2: stats[1] = _num_interpolations;
@@ -270,6 +278,10 @@ KrigingDataBaseNNDB::getStatisticsNames() const
   names.emplace_back("Number of interpolation calls (across all value dims)");
   names.emplace_back("Number of error calls (across all value dims)");
   names.emplace_back("Number of error calls with too small models (across all value dims) (note: 2 interpolations for each of these)");
+  names.emplace_back("Number of singleton models used");
+  names.emplace_back("Number of non-singleton models used");
+  names.emplace_back("Number of valid knn models produced");
+  names.emplace_back("Number of invalid knn models produced");
 
   return names;
 }
@@ -292,6 +304,7 @@ KrigingDataBaseNNDB::printDBStats(std::ostream & outputStream) const
 InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
     const double *point)
 {
+  static int foundcount = 0;
   // knn inputs
   std::vector<int> ids(_maxKrigingModelSize);
   std::vector<double> dists(_maxKrigingModelSize);
@@ -301,7 +314,7 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
 
   // do the knn
   int num_points = _ann.knn(x, _maxKrigingModelSize, ids, dists, points, values);
-  if (num_points == 0) return nullptr;
+  if (num_points == 0) { _num_invalid_knn_models++; return nullptr; }
 
   // TODO: replace point-by-point with variant that builds from
   // all points at once
@@ -330,8 +343,12 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
         ptValue.emplace_back(1, values[i].data() + j);
     }
 
-    modelptr->addPoint(pt, ptValue);
+    modelptr->addPoint(pt, ptValue, true);
   }
+  if (modelptr->getNumberPoints() > 1)
+    _num_knn_nonsingleton_models++;
+  else
+    _num_knn_singleton_models++;
 
   // perform distance check
   // TODO: can do this check without constructing the model
@@ -342,10 +359,14 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
     krigalg::dot(pointRelativePosition, pointRelativePosition);
 
   // distance check failure == build failure
-  if (distanceSqr > _maxQueryPointModelDistance*_maxQueryPointModelDistance)
+  if (distanceSqr > _maxQueryPointModelDistance*_maxQueryPointModelDistance) {
+    _num_invalid_knn_models++;
     return nullptr;
-  else
+  }
+  else {
+    _num_valid_knn_models++;
     return modelptr;
+  }
 }
 
 bool KrigingDataBaseNNDB::checkErrorAndInterpolate(

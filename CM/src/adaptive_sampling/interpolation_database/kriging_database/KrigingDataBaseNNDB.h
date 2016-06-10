@@ -150,6 +150,10 @@ class KrigingDataBaseNNDB
   uint64_t _num_interpolations;
   uint64_t _num_err_calls;
   uint64_t _num_err_toosmalls;
+  uint64_t _num_knn_singleton_models;
+  uint64_t _num_knn_nonsingleton_models;
+  uint64_t _num_valid_knn_models;
+  uint64_t _num_invalid_knn_models;
 
   //
   // helper functions
