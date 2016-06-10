@@ -64,7 +64,7 @@ ApproxNearestNeighborsFLANNDB::knn_helper(
     values.resize(num_neighbors_found);
     for (int i = 0; i < num_neighbors_found; i++) {
       int id = indices[0][i];
-      double *dat = flann_index.getPoint(static_cast<size_t>(id));
+      const double *dat = flann_index.getPoint(static_cast<size_t>(id));
       ids[i]  = id;
       points[i].resize(dim);
       std::copy(dat, dat+dim, points[i].begin());
