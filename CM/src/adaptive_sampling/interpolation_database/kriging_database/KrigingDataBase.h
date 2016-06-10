@@ -282,6 +282,10 @@ namespace krigcpl {
       static int ninstance;
       static uint64_t _ninterp_grad;
       static uint64_t _ninterp_nograd;
+      static uint64_t _nadd_raw;
+      static uint64_t _nadd_maxsize;
+      static uint64_t _nadd_incsucceed;
+      static uint64_t _nadd_incfail;
 
       //
       // kriging model aging threshold in seconds. kriging models that

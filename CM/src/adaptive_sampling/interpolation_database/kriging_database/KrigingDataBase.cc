@@ -86,7 +86,7 @@ Additional BSD Notice
 #include <toolbox/database/HDFDatabase.h>
 #include <murmur3/MurmurHash3.h>
 
-#define PRINT_STATS 0
+#define PRINT_STATS 1
 
 #define STRING_DIGITS 16
 #define MURMUR_SEED 42
@@ -106,6 +106,10 @@ namespace krigcpl {
 int KrigingDataBase::ninstance = 0;
 uint64_t KrigingDataBase::_ninterp_grad = 0;
 uint64_t KrigingDataBase::_ninterp_nograd = 0;
+uint64_t KrigingDataBase::_nadd_raw = 0;
+uint64_t KrigingDataBase::_nadd_maxsize = 0;
+uint64_t KrigingDataBase::_nadd_incsucceed = 0;
+uint64_t KrigingDataBase::_nadd_incfail = 0;
 
 uint128_t saved_model_key;
 
@@ -1602,12 +1606,20 @@ uint128_t saved_model_key;
             "  num interp calcs with gradient:        %lu\n"
             "  num interp calcs w/o  gradient:        %lu\n"
             "  num error calcs:                       %lu\n"
-            "  num error calcs with too small models: %lu\n",
+            "  num error calcs with too small models: %lu\n"
+            "  num model constructions from scratch:  %lu\n"
+            "  num new models from size threshold:    %lu\n"
+            "  num model incremental add successes:   %lu\n"
+            "  num model incremental add failures:    %lu\n",
             _ninterp_grad+_ninterp_nograd,
             _ninterp_grad,
             _ninterp_nograd,
             _nerr_calls,
-            _nerr_toosmall);
+            _nerr_toosmall,
+            _nadd_raw,
+            _nadd_maxsize,
+            _nadd_incsucceed,
+            _nadd_incfail);
       }
     }
     
@@ -2265,6 +2277,7 @@ uint128_t saved_model_key;
 
       if (hint == id_undefined) {
 	
+        _nadd_raw++;
 	//
 	// create and add new model
 	//
@@ -2304,6 +2317,7 @@ uint128_t saved_model_key;
 
 	if (krigingModel->getNumberPoints() == _maxKrigingModelSize) {
 
+    _nadd_maxsize++;
            addNewModel(
                        _modelDB,
                        _ann,
@@ -2361,7 +2375,7 @@ uint128_t saved_model_key;
 							      pointValue);
 
 	  if (addPointSuccess == true) {
-	    
+	    _nadd_incsucceed++;
 	    //
 	    // compute the center of mass for the updated model
 	    //
@@ -2401,6 +2415,7 @@ uint128_t saved_model_key;
 
 	  } else {
 
+      _nadd_incfail++;
 	    //
 	    // point insertion failed-add new model
 	    //
