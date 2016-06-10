@@ -134,6 +134,10 @@ class KrigingDataBaseNNDB
 
   krigalg::InterpolationModelFactoryPointer _modelFactory;
 
+  // model cache
+  krigalg::InterpolationModelPtr _modelcache;
+  krigalg::Point _modelcache_center;
+
   ApproxNearestNeighborsDB&     _ann;
 
   const int    _pointDimension;
@@ -154,6 +158,8 @@ class KrigingDataBaseNNDB
   uint64_t _num_knn_nonsingleton_models;
   uint64_t _num_valid_knn_models;
   uint64_t _num_invalid_knn_models;
+  uint64_t _num_modelcache_hits;
+  uint64_t _num_modelcache_misses;
 
   //
   // helper functions
@@ -178,7 +184,6 @@ class KrigingDataBaseNNDB
    */
   bool checkErrorAndInterpolate(
       const krigalg::Point &queryPoint,
-      const krigalg::InterpolationModel &model,
       double *value,
       double *gradient,
       double &errorEstimate);

@@ -161,7 +161,9 @@ KrigingDataBaseNNDB::KrigingDataBaseNNDB(
   _num_knn_singleton_models(0),
   _num_knn_nonsingleton_models(0),
   _num_valid_knn_models(0),
-  _num_invalid_knn_models(0) { }
+  _num_invalid_knn_models(0),
+  _num_modelcache_hits(0),
+  _num_modelcache_misses(0) { }
 
 KrigingDataBaseNNDB::~KrigingDataBaseNNDB() { }
 
@@ -180,19 +182,28 @@ bool KrigingDataBaseNNDB::interpolate(
     const double * point,
     double & error_estimate)
 {
-  // TODO: insert model cache lookup here
-
-  //
-  // Find closest set of points comprising a kriging model.
-  //
-  InterpolationModelPtr modelptr = findBuildCoKrigingModel(point);
-
-  if (modelptr == nullptr || !modelptr->isValid()) return false;
-
   const Point queryPoint(_pointDimension, point);
 
-  return checkErrorAndInterpolate(
-      queryPoint, *modelptr, value, gradient, error_estimate);
+  // modelcache lookup - failure invalidates the cache
+  if (_modelcache != nullptr) {
+    if (checkErrorAndInterpolate(queryPoint, value, gradient, error_estimate)) {
+      _num_modelcache_hits++;
+      return true;
+    }
+    else
+      _num_modelcache_misses++;
+  }
+
+  // Find closest set of points comprising a kriging model.
+  _modelcache = findBuildCoKrigingModel(point);
+  if (_modelcache == nullptr || !_modelcache->isValid()) return false;
+  // compute the centroid of the model
+  _modelcache_center = getModelCenterMass(*_modelcache);
+
+  bool success = checkErrorAndInterpolate(
+      queryPoint, value, gradient, error_estimate);
+  if (!success) _modelcache.reset();
+  return success;
 }
 
 void
@@ -242,7 +253,7 @@ KrigingDataBaseNNDB::insert(
 //
 
 int
-KrigingDataBaseNNDB::getNumberStatistics() const { return 8; }
+KrigingDataBaseNNDB::getNumberStatistics() const { return 10; }
 
 //
 // Write performance stats
@@ -254,14 +265,16 @@ KrigingDataBaseNNDB::getStatistics(double *stats, int size) const
   if (size <= 0) return;
   if (size > 8) size = 8;
   switch(size) {
-    case 8: stats[7] = _num_invalid_knn_models;
-    case 7: stats[6] = _num_valid_knn_models;
-    case 6: stats[5] = _num_knn_nonsingleton_models;
-    case 5: stats[4] = _num_knn_singleton_models;
-    case 4: stats[3] = _num_err_toosmalls;
-    case 3: stats[2] = _num_err_calls;
-    case 2: stats[1] = _num_interpolations;
-    case 1: stats[0] = _numPointValuePairs;
+    case 10: stats[9] = _num_modelcache_misses;
+    case 9:  stats[8] = _num_modelcache_hits;
+    case 8:  stats[7] = _num_invalid_knn_models;
+    case 7:  stats[6] = _num_valid_knn_models;
+    case 6:  stats[5] = _num_knn_nonsingleton_models;
+    case 5:  stats[4] = _num_knn_singleton_models;
+    case 4:  stats[3] = _num_err_toosmalls;
+    case 3:  stats[2] = _num_err_calls;
+    case 2:  stats[1] = _num_interpolations;
+    case 1:  stats[0] = _numPointValuePairs;
   }
 }
 
@@ -282,6 +295,8 @@ KrigingDataBaseNNDB::getStatisticsNames() const
   names.emplace_back("Number of non-singleton models used");
   names.emplace_back("Number of valid knn models produced");
   names.emplace_back("Number of invalid knn models produced");
+  names.emplace_back("Number of model cache hits");
+  names.emplace_back("Number of model cache misses");
 
   return names;
 }
@@ -304,7 +319,6 @@ KrigingDataBaseNNDB::printDBStats(std::ostream & outputStream) const
 InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
     const double *point)
 {
-  static int foundcount = 0;
   // knn inputs
   std::vector<int> ids(_maxKrigingModelSize);
   std::vector<double> dists(_maxKrigingModelSize);
@@ -350,32 +364,28 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
   else
     _num_knn_singleton_models++;
 
+  return modelptr;
+}
+
+bool KrigingDataBaseNNDB::checkErrorAndInterpolate(
+    const Point &queryPoint,
+    double *value,
+    double *gradient,
+    double &errorEstimate)
+{
   // perform distance check
-  // TODO: can do this check without constructing the model
-  const Point modelCenter = getModelCenterMass(*modelptr);
-  const Vector pointRelativePosition =
-    Point(_pointDimension, point) - modelCenter;
+  const Vector pointRelativePosition = queryPoint - _modelcache_center;
   const double distanceSqr =
     krigalg::dot(pointRelativePosition, pointRelativePosition);
 
   // distance check failure == build failure
   if (distanceSqr > _maxQueryPointModelDistance*_maxQueryPointModelDistance) {
     _num_invalid_knn_models++;
-    return nullptr;
+    return false;
   }
-  else {
+  else
     _num_valid_knn_models++;
-    return modelptr;
-  }
-}
 
-bool KrigingDataBaseNNDB::checkErrorAndInterpolate(
-    const Point &queryPoint,
-    const InterpolationModel &model,
-    double *value,
-    double *gradient,
-    double &errorEstimate)
-{
   const double toleranceSqr = _tolerance*_tolerance;
 
   // NOTE: doing max calc on the squared error estimate - take square root at
@@ -383,7 +393,7 @@ bool KrigingDataBaseNNDB::checkErrorAndInterpolate(
   errorEstimate = 0.;
 
   for (int i = 0; i < _valueDimension; i++) {
-    const double errEst = compKrigingError(queryPoint, model, i);
+    const double errEst = compKrigingError(queryPoint, *_modelcache, i);
 
     errorEstimate = std::max(errorEstimate, errEst);
 
@@ -399,10 +409,10 @@ bool KrigingDataBaseNNDB::checkErrorAndInterpolate(
     // the gradient is simply discarded).
     //
     _num_interpolations++;
-    const Value valueEstimate = model.interpolate(i, queryPoint);
+    const Value valueEstimate = _modelcache->interpolate(i, queryPoint);
     value[i] = valueEstimate[0];
     if (gradient) {
-      assert(model.hasGradient());
+      assert(_modelcache->hasGradient());
       for (int j = 0; j < _pointDimension; j++) {
         gradient[j*_valueDimension + i] = valueEstimate[1+j];
       }
