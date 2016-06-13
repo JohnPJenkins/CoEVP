@@ -4200,12 +4200,17 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
            else {
              // should be checked for in lulesh_main
              assert(flanning);
-             assert(mode == HGSVC_NONE);
+             assert(mode == HGSVC_NONE || mode == HGSVC_NNONLY);
+             if (mode == HGSVC_NONE) {
 #ifdef FLANN
-             anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks);
+               anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks);
 #else
-             throw std::runtime_error("FLANN not compiled in");
+               throw std::runtime_error("FLANN not compiled in");
 #endif
+             }
+             else {
+               anndb = new ApproxNearestNeighborsDBHGWrapClient(ssg, mid);
+             }
              if (global_ns && !global_anndb) global_anndb = anndb;
            }
          }
