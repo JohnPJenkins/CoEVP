@@ -1,4 +1,5 @@
 #include <stdexcept>
+#include <stdio.h>
 
 #if defined(COEVP_MPI)
 #include <mpi.h>

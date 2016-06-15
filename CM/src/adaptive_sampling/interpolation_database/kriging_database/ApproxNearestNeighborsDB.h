@@ -19,6 +19,7 @@ class ApproxNearestNeighborsDB
       std::vector<std::vector<double>> &points,
       std::vector<std::vector<double>> &values) = 0;
 
+  virtual ~ApproxNearestNeighborsDB() {};
 };
 
 #endif
