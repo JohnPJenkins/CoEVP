@@ -55,8 +55,10 @@ int main(int argc, char *argv[])
   int edgeElems = 16;
   double domStopTime = 1.e-1;
   int simStopCycle = 0;
-  
-  Lulesh luleshSystem;
+
+  // NOTE: have to use dyamic mem here - destructor is unsafe when initialize
+  // isn't called (which is the case on servers)
+  std::unique_ptr<Lulesh> luleshSystem;
 
   //  Parse command line optoins
   int  help   = 0;
@@ -91,8 +93,8 @@ int main(int argc, char *argv[])
     exit(1);
   } 
 
-  // Initialize Taylor cylinder mesh
-  luleshSystem.Initialize(myRank, numRanks, edgeElems, heightElems, domStopTime, simStopCycle, timer);
+  luleshSystem.reset(new Lulesh());
+  luleshSystem->InitializeMPI(split_comm, edgeElems, heightElems, domStopTime, simStopCycle, timer);
 
   DIE_IF(nnonly && (!sampling || !flanning || posixing || redising || hioing),
       "NN-only DB requires sampling, using flann (for now) and doesn't use a DB mode");
@@ -223,13 +225,13 @@ int main(int argc, char *argv[])
 #endif
 
   // Construct fine scale models
-  luleshSystem.ConstructFineScaleModel(sampling,global_modelDB,global_ann,global_anndb,flanning,flann_n_trees,flann_n_checks,global_ns,nnonly,use_vpsc, c_scaling, hgsvc_mode, svc.ssg, svc.mid);
+  luleshSystem->ConstructFineScaleModel(sampling,global_modelDB,global_ann,global_anndb,flanning,flann_n_trees,flann_n_checks,global_ns,nnonly,use_vpsc, c_scaling, hgsvc_mode, svc.ssg, svc.mid);
   
   // Exchange nodal mass
-  luleshSystem.ExchangeNodalMass();
+  luleshSystem->ExchangeNodalMass();
 
-  // Simulate 
-  luleshSystem.go(myRank,numRanks,sampling,visit_data_interval,file_parts,debug_topology);
+  // Simulate
+  luleshSystem->go(splitRank,numSplitRanks,sampling,visit_data_interval,file_parts,debug_topology);
 
   // Only do this is we have actually opened a REDIS connection.
 #if defined(LOGGER)
