@@ -160,6 +160,8 @@ class KrigingDataBaseNNDB
   uint64_t _num_invalid_knn_models;
   uint64_t _num_modelcache_hits;
   uint64_t _num_modelcache_misses;
+  uint64_t _num_model_incadd_succeeds;
+  uint64_t _num_model_incadd_fails;
 
   //
   // helper functions

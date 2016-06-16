@@ -163,7 +163,9 @@ KrigingDataBaseNNDB::KrigingDataBaseNNDB(
   _num_valid_knn_models(0),
   _num_invalid_knn_models(0),
   _num_modelcache_hits(0),
-  _num_modelcache_misses(0) { }
+  _num_modelcache_misses(0),
+  _num_model_incadd_succeeds(0),
+  _num_model_incadd_fails(0) { }
 
 KrigingDataBaseNNDB::~KrigingDataBaseNNDB() { }
 
@@ -253,7 +255,7 @@ KrigingDataBaseNNDB::insert(
 //
 
 int
-KrigingDataBaseNNDB::getNumberStatistics() const { return 10; }
+KrigingDataBaseNNDB::getNumberStatistics() const { return 12; }
 
 //
 // Write performance stats
@@ -263,8 +265,10 @@ void
 KrigingDataBaseNNDB::getStatistics(double *stats, int size) const
 {
   if (size <= 0) return;
-  if (size > 10) size = 10;
+  if (size > 12) size = 12;
   switch(size) {
+    case 12: stats[11] = _num_model_incadd_fails;
+    case 11: stats[10] = _num_model_incadd_succeeds;
     case 10: stats[9] = _num_modelcache_misses;
     case 9:  stats[8] = _num_modelcache_hits;
     case 8:  stats[7] = _num_invalid_knn_models;
@@ -297,6 +301,8 @@ KrigingDataBaseNNDB::getStatisticsNames() const
   names.emplace_back("Number of invalid knn models produced");
   names.emplace_back("Number of model cache hits");
   names.emplace_back("Number of model cache misses");
+  names.emplace_back("Number of model incremental add successes");
+  names.emplace_back("Number of model incremental add failures ");
 
   return names;
 }
@@ -357,7 +363,8 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
         ptValue.emplace_back(1, values[i].data() + j);
     }
 
-    modelptr->addPoint(pt, ptValue, true);
+    bool success = modelptr->addPoint(pt, ptValue, true);
+    if (success) _num_model_incadd_succeeds++; else _num_model_incadd_fails++;
   }
   if (modelptr->getNumberPoints() > 1)
     _num_knn_nonsingleton_models++;
