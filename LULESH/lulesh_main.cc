@@ -215,7 +215,11 @@ int main(int argc, char *argv[])
 #endif
 
   // Construct fine scale models
+<<<<<<< HEAD
   luleshSystem.ConstructFineScaleModel(sampling,global_modelDB,global_ann,flanning,flann_n_trees,flann_n_checks,global_ns,use_vpsc, c_scaling);
+=======
+  luleshSystem->ConstructFineScaleModel(sampling,global_modelDB,global_ann,&global_anndb,flanning,flann_n_trees,flann_n_checks,global_ns,nnonly,use_vpsc, c_scaling, hgsvc_mode, svc.ssg, svc.mid);
+>>>>>>> 3afe799... add per-nearest-neighbor op timing - hard-coded flag
   
   // Exchange nodal mass
   luleshSystem.ExchangeNodalMass();
@@ -230,9 +234,34 @@ int main(int argc, char *argv[])
   }
 #endif
   
+<<<<<<< HEAD
 #if defined(COEVP_MPI)
    MPI_Finalize() ;
 #endif
+=======
+  // completely terrible but don't wanna go through the trouble of putting file
+  // IO everywhere
+  if (global_anndb) {
+    if (splitRank == 0) delete global_anndb;
+    if (splitRank > 0 && splitRank+1 < numSplitRanks) {
+      MPI_Send(NULL, 0, MPI_BYTE, splitRank+1, 0, splitComm);
+    }
+    if (splitRank > 0) {
+      MPI_Recv(NULL, 0, MPI_BYTE, splitRank-1, 0, splitComm, MPI_STATUS_IGNORE);
+      delete global_anndb;
+    }
+  }
+
+  if (hgsvc_mode != HGSVC_NONE && splitRank == 0) {
+    hret = svc.ShutdownAll();
+    DIE_IF(hret != HG_SUCCESS, "Unable to shutdown, hard-stop");
+  }
+  int compare_result = 0;
+  MPI_Comm_compare(split_comm, MPI_COMM_WORLD, &compare_result);
+  if (compare_result != MPI_IDENT)
+    MPI_Comm_free(&split_comm);
+  MPI_Finalize();
+>>>>>>> 3afe799... add per-nearest-neighbor op timing - hard-coded flag
 
   return 0;
 }

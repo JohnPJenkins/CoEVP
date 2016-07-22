@@ -4,15 +4,42 @@
  * See COPYRIGHT-ANL in top-level directory.
  */
 
+#include <iostream>
 #include <algorithm>
 #include "ApproxNearestNeighborsFLANNDB.h"
 
 #ifdef FLANN
 
+namespace {
+  auto now = &std::chrono::steady_clock::now;
+  using time_point = std::chrono::steady_clock::time_point;
+  using dur = std::chrono::duration<double>;
+} /* namespace */
+
+ApproxNearestNeighborsFLANNDB::~ApproxNearestNeighborsFLANNDB()
+{
+  if (is_timing) {
+    std::cout <<
+      "## FLANNDB INSERT TIMES (total: " << ins_times.size() << ")" << std::endl;
+    for (size_t i = 0; i < ins_times.size(); i++) {
+      std::cout << ins_times[i].count() << std::endl;
+    }
+    std::cout <<
+      "## FLANNDB KNN TIMES (total: " << knn_times.size() << ")" << std::endl;
+    for (size_t i = 0; i < knn_times.size(); i++) {
+      std::cout << knn_times[i].count() << std::endl;
+    }
+    std::cout << "## DONE" << std::endl;
+  }
+}
+
 void ApproxNearestNeighborsFLANNDB::insert(
     std::vector<double> const &point,
     std::vector<double> const &value)
 {
+  time_point start;
+  if (is_timing) start = now();
+
   assert(point.size() == static_cast<size_t>(dim));
 
   double * pdata = new double[dim];
@@ -29,6 +56,8 @@ void ApproxNearestNeighborsFLANNDB::insert(
   else {
     flann_index.addPoints(pts,4.0);
   }
+
+  if (is_timing) ins_times.push_back(now()-start);
 }
 
 int
@@ -84,7 +113,12 @@ ApproxNearestNeighborsFLANNDB::knn(
     std::vector<std::vector<double>> &points,
     std::vector<std::vector<double>> &values)
 {
-  return knn_helper(x, k, n_checks_default, ids, dists, points, values);
+  int ret;
+  time_point start;
+  if (is_timing) start = now();
+  ret = knn_helper(x, k, n_checks_default, ids, dists, points, values);
+  if (is_timing) knn_times.push_back(now()-start);
+  return ret;
 }
 
 #endif

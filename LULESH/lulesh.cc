@@ -4062,7 +4062,7 @@ void Lulesh::Initialize(int myRank, int numRanks, int edgeDim, int heightDim, do
 }
 
 
-void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_modelDB, ApproxNearestNeighbors* global_ann, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int use_vpsc, double c_scaling)
+void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_modelDB, ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB **global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling, hg_service_mode mode, ssg_t ssg, margo_instance_id mid)
 {
    Index_t domElems = domain.numElem();
 
@@ -4191,10 +4191,33 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
             modelDB = new ModelDB_HashMap();
          }
 
-         if (global_ann) {
-            ann = global_ann;
-         } else {
-            if (flanning) {
+         if (nnonly) {
+           if (*global_anndb) {
+             anndb = *global_anndb;
+           }
+           else {
+             // should be checked for in lulesh_main
+             assert(flanning);
+             assert(mode == HGSVC_NONE || mode == HGSVC_NNONLY);
+             if (mode == HGSVC_NONE) {
+#ifdef FLANN
+               anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks, false);
+#else
+               throw std::runtime_error("FLANN not compiled in");
+#endif
+             }
+             else {
+               anndb = new ApproxNearestNeighborsDBHGWrapClient(ssg, mid, false);
+             }
+             if (global_ns && !*global_anndb) *global_anndb = anndb;
+           }
+         }
+         else {
+           if (global_ann) {
+             ann = global_ann;
+           }
+           else {
+             if (flanning) {
 #ifdef FLANN
                ann = (ApproxNearestNeighbors*)(new ApproxNearestNeighborsFLANN(point_dimension, flann_n_trees, flann_n_checks));
 #else
