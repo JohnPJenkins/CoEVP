@@ -51,6 +51,8 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
       std::vector<std::vector<double>> &points,
       std::vector<std::vector<double>> &values) override;
 
+  void dump(const std::string &filename) override;
+
   private:
 
   int knn_helper(

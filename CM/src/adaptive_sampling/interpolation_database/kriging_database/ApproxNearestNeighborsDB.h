@@ -2,6 +2,7 @@
 #define included_ApproxNearestNeighborsDB_h
 
 #include <vector>
+#include <string>
 
 class ApproxNearestNeighborsDB
 {
@@ -18,6 +19,9 @@ class ApproxNearestNeighborsDB
       std::vector<double> &dists,
       std::vector<std::vector<double>> &points,
       std::vector<std::vector<double>> &values) = 0;
+
+  // optional
+  virtual void dump(const std::string &filename) { }
 
   virtual ~ApproxNearestNeighborsDB() {};
 };

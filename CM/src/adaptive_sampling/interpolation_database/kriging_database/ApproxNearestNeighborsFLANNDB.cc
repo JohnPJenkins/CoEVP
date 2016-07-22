@@ -4,6 +4,7 @@
  * See COPYRIGHT-ANL in top-level directory.
  */
 
+#include <fstream>
 #include <iostream>
 #include <algorithm>
 #include "ApproxNearestNeighborsFLANNDB.h"
@@ -119,6 +120,40 @@ ApproxNearestNeighborsFLANNDB::knn(
   ret = knn_helper(x, k, n_checks_default, ids, dists, points, values);
   if (is_timing) knn_times.push_back(now()-start);
   return ret;
+}
+
+void
+ApproxNearestNeighborsFLANNDB::dump(
+    const std::string &filename)
+{
+  std::ofstream of(filename,
+      std::ios_base::out | std::ios_base::binary | std::ios_base::trunc);
+  assert(of.is_open() && of.good());
+  // print header, of the format:
+  // <64-bit point dimension> <64-bit value dimension>
+  // NOTE: assuming all values have the same dimension
+  uint64_t header[2];
+  header[0] = dim; header[1] = ann_values[0].size();
+  of.write(reinterpret_cast<const char*>(header), sizeof header);
+  // print point/values
+  auto point_iter = ann_points.cbegin();
+  auto value_iter = ann_values.cbegin();
+  while (point_iter != ann_points.cend() && value_iter != ann_values.cend()) {
+    std::cout << "point: ";
+    for (int i = 0; i < dim; i++) {
+      const double p = (*point_iter)[i];
+      std::cout << p << " ";
+      of.write(reinterpret_cast<const char*>(&p), sizeof p);
+      assert(of.good());
+    }
+    std::cout << std::endl;
+    for (const auto &v : *value_iter) {
+      of.write(reinterpret_cast<const char*>(&v), sizeof v);
+      assert(of.good());
+    }
+    point_iter++;
+    value_iter++;
+  }
 }
 
 #endif
