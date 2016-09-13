@@ -66,7 +66,35 @@ Additional BSD Notice
 #include "ElastoViscoPlasticity.h"
 #include "xtensor.h"
 
+#include <sstream>
+#include <iostream>
+#include <iomanip>
+#include <vector>
+#include <chrono>
 
+namespace {
+
+constexpr int COLLECT_EVAL_TIMES = 0;
+constexpr int NUM_COLLECTS = 1000;
+
+static std::vector<double> evaltimes;
+static auto now = &std::chrono::steady_clock::now;
+using tp  = std::chrono::steady_clock::time_point;
+using dur = std::chrono::duration<double>;
+
+void printTimesAndExit()
+{
+    std::stringstream ss;
+    ss << "===FINE SCALE MODEL TIMINGS===\n";
+    for (auto t : evaltimes) {
+        ss << "== " << std::scientific << std::setprecision(4) << t << "\n";
+    }
+    ss << "==============================\n";
+    std::cout << ss.rdbuf();
+    std::exit(0);
+}
+
+} // namespace
 
 ElastoViscoPlasticity::ElastoViscoPlasticity( ConstitutiveGlobal&           global,
                                               ApproxNearestNeighbors*       ann, 
@@ -742,6 +770,8 @@ ElastoViscoPlasticity::evaluateFineScaleModel( const Tensor2Sym& tau_bar_prime,
                                                Tensor2Sym&       Dbar_prime,
                                                Tensor4LSym&      Dbar_prime_deriv ) const
 {
+    static int collect_count = 0;
+    static int next = 1;
    if ( adaptiveSamplingEnabled() ) {
 
       std::vector<double> point(m_plasticity_model->pointDimension());
@@ -755,9 +785,22 @@ ElastoViscoPlasticity::evaluateFineScaleModel( const Tensor2Sym& tau_bar_prime,
 
    }
    else {
+      if (COLLECT_EVAL_TIMES && collect_count == next) {
+          std::cout << "on eval " << collect_count << "\n";
+          next *= 2;
+      }
+      tp t;
+      if (COLLECT_EVAL_TIMES) {
+          if (collect_count < NUM_COLLECTS) { t = now(); }
+          else { printTimesAndExit(); }
+      }
 
       m_plasticity_model->evaluateNative( tau_bar_prime, Dbar_prime, Dbar_prime_deriv );
 
+      if (COLLECT_EVAL_TIMES) {
+          evaltimes.push_back(static_cast<dur>(now()-t).count());
+          collect_count++;
+      }
    }
 }
 
