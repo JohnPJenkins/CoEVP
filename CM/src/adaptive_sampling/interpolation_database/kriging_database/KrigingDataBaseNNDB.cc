@@ -322,7 +322,7 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
     const double *point)
 {
   // knn inputs
-  std::vector<int> ids(_maxKrigingModelSize);
+  std::vector<size_t> ids(_maxKrigingModelSize);
   std::vector<double> dists(_maxKrigingModelSize);
   std::vector<std::vector<double>> points(_maxKrigingModelSize);
   std::vector<std::vector<double>> values(_maxKrigingModelSize);

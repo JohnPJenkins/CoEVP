@@ -52,7 +52,7 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
   int knn(
       std::vector<double> const &x,
       int k,
-      std::vector<int> &ids,
+      std::vector<size_t> &ids,
       std::vector<double> &dists,
       std::vector<std::vector<double>> &points,
       std::vector<std::vector<double>> &values) override;
@@ -65,7 +65,7 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
       std::vector<double> const& x,
       int k,
       int n_checks,
-      std::vector<int> &ids,
+      std::vector<size_t> &ids,
       std::vector<double> &dists,
       std::vector<std::vector<double>> &points,
       std::vector<std::vector<double>> &values);
