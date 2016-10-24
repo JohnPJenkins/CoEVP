@@ -14,7 +14,7 @@ class ApproxNearestNeighborsDB
       size_t num_values) = 0;
 
   virtual int knn(
-      std::vector<double> const &x,
+      double const * x,
       int k,
       std::vector<size_t> &ids,
       std::vector<double> &dists,

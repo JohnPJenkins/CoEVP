@@ -326,10 +326,9 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
   std::vector<double> dists(_maxKrigingModelSize);
   std::vector<std::vector<double>> points(_maxKrigingModelSize);
   std::vector<std::vector<double>> values(_maxKrigingModelSize);
-  const std::vector<double> x(point, point+_pointDimension);
 
   // do the knn
-  int num_points = _ann.knn(x, _maxKrigingModelSize, ids, dists, points, values);
+  int num_points = _ann.knn(point, _maxKrigingModelSize, ids, dists, points, values);
   if (num_points == 0) { _num_invalid_knn_models++; return nullptr; }
 
   // TODO: replace point-by-point with variant that builds from

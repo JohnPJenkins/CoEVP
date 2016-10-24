@@ -46,7 +46,7 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
       size_t num_values) override;
 
   int knn(
-      std::vector<double> const &x,
+      double const *x,
       int k,
       std::vector<size_t> &ids,
       std::vector<double> &dists,
@@ -58,7 +58,7 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
   private:
 
   int knn_helper(
-      std::vector<double> const& x,
+      double const *x,
       int k,
       int n_checks,
       std::vector<size_t> &ids,

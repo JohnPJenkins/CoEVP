@@ -63,7 +63,7 @@ void ApproxNearestNeighborsFLANNDB::insert(
 
 int
 ApproxNearestNeighborsFLANNDB::knn_helper(
-    std::vector<double> const& x,
+    double const *x,
     int k,
     int n_checks,
     std::vector<size_t> &ids,
@@ -77,7 +77,7 @@ ApproxNearestNeighborsFLANNDB::knn_helper(
     return 0;
   }
   else {
-    flann::Matrix<double> query(const_cast<double*>(x.data()), 1, dim);
+    flann::Matrix<double> query(const_cast<double*>(x), 1, dim);
 
     std::vector<std::vector<size_t>> indices;
     std::vector<std::vector<double>> mdists;
@@ -111,7 +111,7 @@ ApproxNearestNeighborsFLANNDB::knn_helper(
 
 int
 ApproxNearestNeighborsFLANNDB::knn(
-    std::vector<double> const& x,
+    double const *x,
     int k,
     std::vector<size_t> &ids,
     std::vector<double> &dists,
