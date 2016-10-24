@@ -39,6 +39,9 @@ void ApproxNearestNeighborsFLANNDB::insert(
     double const * value,
     size_t num_values)
 {
+  time_point start;
+  if (is_timing) start = now();
+
   double *pvdata = new double[dim+num_values];
   std::copy(point, point+dim, pvdata);
   std::copy(value, value+num_values, pvdata+dim);
@@ -54,19 +57,6 @@ void ApproxNearestNeighborsFLANNDB::insert(
   else {
     flann_index.addPoints(pts,4.0);
   }
-
-}
-
-void ApproxNearestNeighborsFLANNDB::insert(
-    std::vector<double> const &point,
-    std::vector<double> const &value)
-{
-  time_point start;
-  if (is_timing) start = now();
-
-  assert(point.size() == static_cast<size_t>(dim));
-
-  insert(point.data(), value.data(), value.size());
 
   if (is_timing) ins_times.push_back(now()-start);
 }

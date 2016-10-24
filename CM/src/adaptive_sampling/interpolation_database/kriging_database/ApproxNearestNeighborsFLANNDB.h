@@ -45,10 +45,6 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
       double const *value,
       size_t num_values) override;
 
-  void insert(
-      std::vector<double> const &point,
-      std::vector<double> const &value) override;
-
   int knn(
       std::vector<double> const &x,
       int k,
