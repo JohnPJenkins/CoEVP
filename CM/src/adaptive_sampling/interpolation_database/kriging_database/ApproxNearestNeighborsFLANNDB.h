@@ -21,8 +21,10 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
   bool is_timing;
   std::vector<std::chrono::duration<double>> ins_times;
   std::vector<std::chrono::duration<double>> knn_times;
-  std::vector<double *> ann_points;
-  std::vector<std::vector<double>> ann_values;
+
+  struct pvpair { std::unique_ptr<double[]> pv; size_t num_values; };
+
+  std::vector<pvpair> ann_pvs;
 
   ApproxNearestNeighborsFLANNDB(
       int dim,
@@ -38,6 +40,10 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
 
   ~ApproxNearestNeighborsFLANNDB();
 
+  void insert(
+      double const *point,
+      double const *value,
+      size_t num_values) override;
 
   void insert(
       std::vector<double> const &point,

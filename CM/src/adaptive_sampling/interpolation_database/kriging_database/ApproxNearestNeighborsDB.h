@@ -9,6 +9,11 @@ class ApproxNearestNeighborsDB
   public:
 
   virtual void insert(
+      double const * point,
+      double const * value,
+      size_t num_values) = 0;
+
+  virtual void insert(
       std::vector<double> const &point,
       std::vector<double> const &value) = 0;
 

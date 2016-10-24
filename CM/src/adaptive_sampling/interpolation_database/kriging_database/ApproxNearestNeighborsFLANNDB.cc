@@ -35,6 +35,29 @@ ApproxNearestNeighborsFLANNDB::~ApproxNearestNeighborsFLANNDB()
 }
 
 void ApproxNearestNeighborsFLANNDB::insert(
+    double const * point,
+    double const * value,
+    size_t num_values)
+{
+  double *pvdata = new double[dim+num_values];
+  std::copy(point, point+dim, pvdata);
+  std::copy(value, value+num_values, pvdata+dim);
+
+  // this invocation moves the temporaty unique ptr
+  ann_pvs.emplace_back(pvpair{std::unique_ptr<double[]>(pvdata), num_values});
+
+  flann::Matrix<double> pts(pvdata, 1, dim);
+  if (is_empty) {
+    flann_index.buildIndex(pts);
+    is_empty = false;
+  }
+  else {
+    flann_index.addPoints(pts,4.0);
+  }
+
+}
+
+void ApproxNearestNeighborsFLANNDB::insert(
     std::vector<double> const &point,
     std::vector<double> const &value)
 {
@@ -43,20 +66,7 @@ void ApproxNearestNeighborsFLANNDB::insert(
 
   assert(point.size() == static_cast<size_t>(dim));
 
-  double * pdata = new double[dim];
-  std::copy(point.begin(), point.end(), pdata);
-
-  ann_points.push_back(pdata);
-  ann_values.emplace_back(value);
-
-  flann::Matrix<double> pts(pdata, 1, dim);
-  if (is_empty) {
-    flann_index.buildIndex(pts);
-    is_empty = false;
-  }
-  else {
-    flann_index.addPoints(pts,4.0);
-  }
+  insert(point.data(), value.data(), value.size());
 
   if (is_timing) ins_times.push_back(now()-start);
 }
@@ -95,10 +105,12 @@ ApproxNearestNeighborsFLANNDB::knn_helper(
     for (int i = 0; i < num_neighbors_found; i++) {
       int id = indices[0][i];
       const double *dat = flann_index.getPoint(static_cast<size_t>(id));
+      const size_t num_values = ann_pvs[id].num_values;
       ids[i]  = id;
       points[i].resize(dim);
       std::copy(dat, dat+dim, points[i].begin());
-      values[i] = ann_values[id];
+      values[i].resize(num_values);
+      std::copy(dat+dim, dat+dim+num_values, values[i].begin());
       dists[i] = mdists[0][i];
     }
     return num_neighbors_found;
@@ -133,26 +145,24 @@ ApproxNearestNeighborsFLANNDB::dump(
   // <64-bit point dimension> <64-bit value dimension>
   // NOTE: assuming all values have the same dimension
   uint64_t header[2];
-  header[0] = dim; header[1] = ann_values[0].size();
+  header[0] = dim; header[1] = ann_pvs[0].num_values;
   of.write(reinterpret_cast<const char*>(header), sizeof header);
   // print point/values
-  auto point_iter = ann_points.cbegin();
-  auto value_iter = ann_values.cbegin();
-  while (point_iter != ann_points.cend() && value_iter != ann_values.cend()) {
+  for (auto pv_iter = ann_pvs.cbegin(); pv_iter != ann_pvs.cend(); ++pv_iter) {
     std::cout << "point: ";
-    for (int i = 0; i < dim; i++) {
-      const double p = (*point_iter)[i];
+    const auto pp = pv_iter->pv.get();
+    for (size_t i = 0; i < (size_t)dim; i++) {
+      const double p = pp[i];
       std::cout << p << " ";
       of.write(reinterpret_cast<const char*>(&p), sizeof p);
       assert(of.good());
     }
     std::cout << std::endl;
-    for (const auto &v : *value_iter) {
+    for (size_t i = (size_t)dim; i < dim+pv_iter->num_values; i++) {
+      const double v = pp[i];
       of.write(reinterpret_cast<const char*>(&v), sizeof v);
       assert(of.good());
     }
-    point_iter++;
-    value_iter++;
   }
 }
 

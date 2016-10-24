@@ -4207,7 +4207,7 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
 #endif
              }
              else {
-               anndb = new ApproxNearestNeighborsDBHGWrapClient(ssg, mid, false);
+               anndb = new ApproxNearestNeighborsDBHGWrapClient(point_dimension, ssg, mid, false);
              }
              if (global_ns && !*global_anndb) *global_anndb = anndb;
            }
