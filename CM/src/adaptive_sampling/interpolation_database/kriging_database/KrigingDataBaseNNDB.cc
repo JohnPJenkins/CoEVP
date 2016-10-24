@@ -221,33 +221,29 @@ KrigingDataBaseNNDB::insert(
   // creation
   //
 
-  const std::vector<double> pointvec(point, point+_pointDimension);
-
   // TODO: currently need a built model to determine whether gradient is being
   // used, could probably just cache the result of one. Assuming that a model
   // either does or does not (and a couple of models confirm this),
   // so shouldn't be any runtime issues
   const bool hasGradient = _modelFactory->build()->hasGradient();
-  std::vector<double> valvec(
-      _valueDimension * (hasGradient ? (_pointDimension + 1) : 1));
 
   if (hasGradient) {
+    auto valarr =
+      std::make_unique<double[]>(_valueDimension*(_pointDimension+1));
     // NOTE: logic taken from copyValueData - puts values and point gradients
     // "in-line" with each other (value,gradient_0,...gradient_pdim-1). Note
     // that gradients must be transposed from their input format
     for (int i = 0; i < _valueDimension; i++) {
       int off = i * (_pointDimension+1);
-      valvec[off] = value[i];
+      valarr[off] = value[i];
       for (int j = 0; j < _pointDimension; j++)
-        valvec[off + j + 1] = gradient[j*_valueDimension + i];
+        valarr[off + j + 1] = gradient[j*_valueDimension + i];
     }
+    _ann.insert(point, valarr.get(), _valueDimension*(_pointDimension+1));
   }
   else {
-    std::copy(value, value+_valueDimension, valvec.begin());
+    _ann.insert(point, value, _valueDimension);
   }
-
-  // add point to the NN-DB
-  _ann.insert(pointvec, valvec);
 }
 
 //
