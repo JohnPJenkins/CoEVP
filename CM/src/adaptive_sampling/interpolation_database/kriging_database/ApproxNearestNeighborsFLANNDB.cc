@@ -96,10 +96,9 @@ ApproxNearestNeighborsFLANNDB::knn_helper(
     ids = std::move(indices[0]);
     dists = std::move(mdists[0]);
     for (int i = 0; i < num_neighbors_found; i++) {
-      int id = ids[0];
+      const int id = ids[i];
       const double *dat = flann_index.getPoint(static_cast<size_t>(id));
       const size_t num_values = ann_pvs[id].num_values;
-      ids[i]  = id;
       points[i].resize(dim);
       std::copy(dat, dat+dim, points[i].begin());
       values[i].resize(num_values);
