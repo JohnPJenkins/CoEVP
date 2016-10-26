@@ -125,6 +125,58 @@ ApproxNearestNeighborsFLANNDB::knn(
   return ret;
 }
 
+ApproxNearestNeighborsDB::knnRet
+ApproxNearestNeighborsFLANNDB::knn(
+    double const * x,
+    int k,
+    size_t *ids,
+    double *dists,
+    double *point_buf,
+    double *value_buf,
+    size_t value_size_avail,
+    size_t *value_offsets)
+{
+  ApproxNearestNeighborsDB::knnRet ret;
+  time_point start;
+  if (is_timing) start = now();
+
+  if (is_empty) { ret.k = 0; ret.overflow = false; }
+  else {
+    flann::Matrix<double> query(const_cast<double*>(x), 1, dim);
+    flann::Matrix<size_t> ids_m(ids, 1, k);
+    flann::Matrix<double> dists_m(dists, 1, k);
+
+    ret.k = flann_index.knnSearch(query, ids_m, dists_m, k,
+        flann::SearchParams(n_checks_default));
+    ret.overflow = false;
+
+    double *vbuf = value_buf;
+    value_offsets[0] = 0;
+    size_t total_values = 0;
+    for (int i = 0; i < ret.k; i++) {
+      const size_t id = ids[i];
+      const size_t vsize = ann_pvs[id].num_values;
+      total_values += vsize;
+      if (total_values <= value_size_avail) {
+        const double *pdat = flann_index.getPoint(static_cast<size_t>(id));
+        const double *vdat = pdat+dim;
+        std::copy(pdat, vdat, point_buf+i*dim);
+        std::copy(vdat, vdat+vsize, vbuf);
+        vbuf += vsize;
+        value_offsets[i+1] = value_offsets[i] + vsize;
+      }
+      else {
+        ret.overflow = true;
+      }
+    }
+    if (ret.overflow) value_offsets[0] = total_values;
+  }
+
+  if (is_timing) knn_times.push_back(now()-start);
+
+  return ret;
+}
+
 void
 ApproxNearestNeighborsFLANNDB::dump(
     const std::string &filename)

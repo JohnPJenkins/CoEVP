@@ -321,41 +321,55 @@ KrigingDataBaseNNDB::printDBStats(std::ostream & outputStream) const
 InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
     const double *point)
 {
-  // knn inputs
-  std::vector<size_t> ids(_maxKrigingModelSize);
-  std::vector<double> dists(_maxKrigingModelSize);
-  std::vector<std::vector<double>> points(_maxKrigingModelSize);
-  std::vector<std::vector<double>> values(_maxKrigingModelSize);
-
-  // do the knn
-  int num_points = _ann.knn(point, _maxKrigingModelSize, ids, dists, points, values);
-  if (num_points == 0) { _num_invalid_knn_models++; return nullptr; }
-
   // TODO: replace point-by-point with variant that builds from
   // all points at once
   auto modelptr = _modelFactory->build();
-  for (int i = 0; i < num_points; i++) {
-    // sanity check the value sizes
-    if (modelptr->hasGradient()) {
-      assert(values[i].size() ==
-          static_cast<size_t>(_valueDimension*(_pointDimension+1)));
-    }
-    else {
-      assert(values[i].size() == static_cast<size_t>(_valueDimension));
-    }
 
-    const Point pt(_pointDimension, points[i].data());
+  const size_t vsize = modelptr->hasGradient()
+    ? (_valueDimension*(_pointDimension+1))
+    : _valueDimension;
+
+  // knn inputs - using type punning to restrict to a single alloc
+  // points + values + dists + ids + value offsets
+  const size_t knn_input_size =
+    (_pointDimension + vsize + 3) * _maxKrigingModelSize + 1;
+
+  auto knnbuf = std::make_unique<double[]>(knn_input_size);
+  // to head off any alignment issues, order the doubles first followed by the
+  // size_t's
+  double *points = knnbuf.get();
+  double *values = points + _pointDimension * _maxKrigingModelSize;
+  double *dists  = values + vsize * _maxKrigingModelSize;
+  auto ids = reinterpret_cast<size_t*>(dists+_maxKrigingModelSize);
+  size_t *value_offsets = ids + _maxKrigingModelSize;
+
+  // do the knn
+  ApproxNearestNeighborsDB::knnRet ret =
+    _ann.knn(point, _maxKrigingModelSize, ids, dists, points, values,
+        vsize*_maxKrigingModelSize, value_offsets);
+
+  // we should never overflow - we know the exact sizes
+  assert(!ret.overflow);
+
+  if (ret.k == 0) { _num_invalid_knn_models++; return nullptr; }
+
+  for (int i = 0; i < ret.k; i++) {
+    // sanity check the value sizes
+    assert(value_offsets[i+1] - value_offsets[i] == vsize);
+
+    const Point pt(_pointDimension, points + i*_pointDimension);
     std::vector<Value> ptValue;
 
     // point is stored in the ANN in the already transformed form, so can
     // memcpy directly
 
+    const double *value = values + i*vsize;
     for (int j = 0; j < _valueDimension; j++) {
       if (modelptr->hasGradient())
         ptValue.emplace_back(
-            _pointDimension+1, values[i].data()+j*(_pointDimension+1));
+            _pointDimension+1, value+j*(_pointDimension+1));
       else
-        ptValue.emplace_back(1, values[i].data() + j);
+        ptValue.emplace_back(1, value + j);
     }
 
     bool success = modelptr->addPoint(pt, ptValue, true);

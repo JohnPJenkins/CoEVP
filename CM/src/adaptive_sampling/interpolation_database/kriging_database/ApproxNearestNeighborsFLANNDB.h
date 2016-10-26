@@ -53,6 +53,17 @@ class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
       std::vector<std::vector<double>> &points,
       std::vector<std::vector<double>> &values) override;
 
+  // non-(re)allocating version - fails if not enough space for values
+  knnRet knn(
+      double const * x,
+      int k,
+      size_t *ids,
+      double *dists,
+      double *point_buf,
+      double *value_buf,
+      size_t value_size_avail,
+      size_t *value_offsets) override;
+
   void dump(const std::string &filename) override;
 
   private:
