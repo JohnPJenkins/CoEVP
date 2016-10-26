@@ -359,6 +359,7 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
 
     const Point pt(_pointDimension, points + i*_pointDimension);
     std::vector<Value> ptValue;
+    ptValue.reserve(_valueDimension);
 
     // point is stored in the ANN in the already transformed form, so can
     // memcpy directly
