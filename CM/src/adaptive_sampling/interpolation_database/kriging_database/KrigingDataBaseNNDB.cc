@@ -349,7 +349,7 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
         vsize*_maxKrigingModelSize, value_offsets);
 
   // we should never overflow - we know the exact sizes
-  assert(!ret.overflow);
+  assert(ret.k == 0 || !ret.overflow);
 
   if (ret.k == 0) { _num_invalid_knn_models++; return nullptr; }
 
