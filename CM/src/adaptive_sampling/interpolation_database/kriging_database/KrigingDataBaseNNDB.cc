@@ -228,8 +228,8 @@ KrigingDataBaseNNDB::insert(
   const bool hasGradient = _modelFactory->build()->hasGradient();
 
   if (hasGradient) {
-    auto valarr =
-      std::make_unique<double[]>(_valueDimension*(_pointDimension+1));
+    std::unique_ptr<double[]> valarr{
+        new double[_valueDimension*(_pointDimension+1)]};
     // NOTE: logic taken from copyValueData - puts values and point gradients
     // "in-line" with each other (value,gradient_0,...gradient_pdim-1). Note
     // that gradients must be transposed from their input format
@@ -334,7 +334,7 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
   const size_t knn_input_size =
     (_pointDimension + vsize + 3) * _maxKrigingModelSize + 1;
 
-  auto knnbuf = std::make_unique<double[]>(knn_input_size);
+  std::unique_ptr<double[]> knnbuf{new double[knn_input_size]};
   // to head off any alignment issues, order the doubles first followed by the
   // size_t's
   double *points = knnbuf.get();
@@ -373,7 +373,7 @@ InterpolationModelPtr KrigingDataBaseNNDB::findBuildCoKrigingModel(
         ptValue.emplace_back(1, value + j);
     }
 
-    bool success = modelptr->addPoint(pt, ptValue, true);
+    bool success = modelptr->addPoint(pt, ptValue);
     if (success) _num_model_incadd_succeeds++; else _num_model_incadd_fails++;
   }
   if (modelptr->getNumberPoints() > 1)

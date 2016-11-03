@@ -8,6 +8,7 @@
 #include <chrono>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 
 class ApproxNearestNeighborsFLANNDB : public ApproxNearestNeighborsDB
 {

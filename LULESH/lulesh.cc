@@ -4063,7 +4063,7 @@ void Lulesh::Initialize(int myRank, int numRanks, int edgeDim, int heightDim, do
 }
 
 
-void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_modelDB, ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB *global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling, hg_service_mode mode, ssg_t ssg, margo_instance_id mid)
+void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_modelDB, ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB *global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling)
 {
    Index_t domElems = domain.numElem();
 
@@ -4200,17 +4200,11 @@ void Lulesh::ConstructFineScaleModel(bool sampling, ModelDatabase * global_model
            else {
              // should be checked for in lulesh_main
              assert(flanning);
-             assert(mode == HGSVC_NONE || mode == HGSVC_NNONLY);
-             if (mode == HGSVC_NONE) {
 #ifdef FLANN
-               anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks);
+             anndb = new ApproxNearestNeighborsFLANNDB(point_dimension, flann_n_trees, flann_n_checks);
 #else
-               throw std::runtime_error("FLANN not compiled in");
+             throw std::runtime_error("FLANN not compiled in");
 #endif
-             }
-             else {
-               anndb = new ApproxNearestNeighborsDBHGWrapClient(ssg, mid);
-             }
              if (global_ns && !global_anndb) global_anndb = anndb;
            }
          }
@@ -4377,10 +4371,10 @@ void Lulesh::go(int myRank, int numRanks, int sampling, int visit_data_interval,
 
       const int num_stats = domain.cm(0)->getNumberStatistics();
       std::vector<std::string> stat_strs = domain.cm(0)->getStatisticsNames();
-      auto stats     = std::make_unique<double[]>(num_stats);
-      auto agg_stats = std::make_unique<double[]>(num_stats);
-      auto max_stats = std::make_unique<double[]>(num_stats);
-      auto min_stats = std::make_unique<double[]>(num_stats);
+      std::unique_ptr<double[]> stats     {new double[num_stats]};
+      std::unique_ptr<double[]> agg_stats {new double[num_stats]};
+      std::unique_ptr<double[]> max_stats {new double[num_stats]};
+      std::unique_ptr<double[]> min_stats {new double[num_stats]};
       std::fill_n(agg_stats.get(), num_stats, 0.);
       std::fill_n(max_stats.get(), num_stats, std::numeric_limits<double>::lowest());
       std::fill_n(min_stats.get(), num_stats, std::numeric_limits<double>::max());
@@ -4414,8 +4408,6 @@ void Lulesh::go(int myRank, int numRanks, int sampling, int visit_data_interval,
             value_max = value_norm_max;
          }
       }
-      averageNumModels /= domElems;
-      averageNumPairs /= domElems;
       point_average /= domElems;
       value_average /= domElems;
 

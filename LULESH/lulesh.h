@@ -173,7 +173,7 @@ void DumpSAMI(Domain *domain, char *name);
 */
 
 void Initialize(int myRank, int numRanks, int edgeDim, int heightDim, double domainStopTime, int simStopCycle, int timerSampleRate);
-void ConstructFineScaleModel(bool sampling,ModelDatabase * global_modelDB,ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB *global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling, hg_service_mode mode, ssg_t ssg, margo_instance_id mid);
+void ConstructFineScaleModel(bool sampling,ModelDatabase * global_modelDB,ApproxNearestNeighbors* global_ann, ApproxNearestNeighborsDB *global_anndb, int flanning, int flann_n_trees, int flann_n_checks, int global_ns, int nnonly, int use_vpsc, double c_scaling);
 void ExchangeNodalMass();
 void go(int myRank, int numRanks, int sampling, int visit_data_interval,int file_parts, int debug_topology);
 
